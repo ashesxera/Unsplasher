@@ -104,7 +104,7 @@ namespace Unsplasher
 
         private void OnApplicationExit(object sender, EventArgs e)
         {
-            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
         }
 
         private static void CloseMenuItem_Click(object sender, EventArgs e)
