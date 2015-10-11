@@ -29,30 +29,67 @@ namespace Unsplasher
         private ToolStripMenuItem[] _imageFormatItems;
         private ToolStripMenuItem[] _intervalItems;
 
-        private System.Drawing.Imaging.ImageFormat _imageFormat;
+        private System.ComponentModel.BackgroundWorker backgroundWorker;
 
-        private Timer timer;
+        static private System.Drawing.Imaging.ImageFormat _imageFormat;
+
+        static private Timer timer;
         
 
         public App()
         {
             Application.ApplicationExit += OnApplicationExit;
+            timer = new Timer { Interval = 1800000 };
+
+            LoadConfigure();
             InitializeComponent();
             _trayIcon.Visible = true;
 
-            timer = new Timer { Interval = 1800000 };
+            
             timer.Tick += _timer_Tick;
             timer.Enabled = true;
             timer.Start();
+
+            _refreshMenuItem.Text = "refreshing";
+            _refreshMenuItem.Enabled = false;
+            backgroundWorker.RunWorkerAsync();
+        }
+
+        private void LoadConfigure()
+        {
+            if (System.IO.File.Exists("config.json"))
+            {
+                string json = System.IO.File.ReadAllText("config.json");
+                try
+                {
+                    string[] keyValueArray = json.Replace("{", string.Empty).Replace("}", string.Empty).Replace("\"", string.Empty).Split(',');
+                    Dictionary<string, string> conf = keyValueArray.ToDictionary(item => item.Split(':')[0], item => item.Split(':')[1]);
+                    timer.Interval = Convert.ToInt32(conf["interval"]);
+                    System.Reflection.PropertyInfo propertyinfo = typeof(System.Drawing.Imaging.ImageFormat).GetProperty(conf["type"]);
+                    _imageFormat = (System.Drawing.Imaging.ImageFormat)propertyinfo.GetValue(null, null);
+                }
+                catch
+                {
+                    ;
+                }
+            }
+            //throw new NotImplementedException();
         }
 
         private void _timer_Tick(object sender, EventArgs e)
         {
-            SetWallpaper(_imageFormat);
+            _refreshMenuItem.Text = "refreshing";
+            _refreshMenuItem.Enabled = false;
+            backgroundWorker.RunWorkerAsync();
         }
 
         private void InitializeComponent()
         {
+            backgroundWorker = new System.ComponentModel.BackgroundWorker();
+            backgroundWorker.WorkerReportsProgress = true;
+            backgroundWorker.DoWork += backgroundWorker_DoWork;
+            backgroundWorker.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
+
             _trayIcon = new NotifyIcon
             {
                 BalloonTipIcon = ToolTipIcon.Info,
@@ -153,9 +190,24 @@ namespace Unsplasher
             _trayIcon.ContextMenuStrip = _trayIconContextMenu;
         }
 
+        private void backgroundWorker_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
+        {
+            _trayIcon.ShowBalloonTip(3000);
+            _refreshMenuItem.Text = "refresh";
+            _refreshMenuItem.Enabled = true;
+            //throw new NotImplementedException();
+        }
+
+        private void backgroundWorker_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        {
+            System.ComponentModel.BackgroundWorker worker = sender as System.ComponentModel.BackgroundWorker;
+            SetWallpaper(_imageFormat);
+        }
+
         private void SelectIntervalMenuItem_Click(object sender, EventArgs e)
         {
-            _intervalItems.All(_intervalItem => _intervalItem.Checked = false);
+            foreach (var imageFormatItem in _imageFormatItems)
+                imageFormatItem.Checked = false;
             ((ToolStripMenuItem)sender).Checked = true;
             switch (sender.ToString())
             {
@@ -189,8 +241,9 @@ namespace Unsplasher
 
         private void RefreshMenuItemClick(object sender, EventArgs e)
         {
-            SetWallpaper(_imageFormat);
-            _trayIcon.ShowBalloonTip(3000);
+            _refreshMenuItem.Text = "refreshing";
+            _refreshMenuItem.Enabled = false;
+            backgroundWorker.RunWorkerAsync();
         }
 
         private static void SetWallpaper(System.Drawing.Imaging.ImageFormat imageformat)
@@ -227,12 +280,27 @@ namespace Unsplasher
 
         private static void CloseMenuItem_Click(object sender, EventArgs e)
         {
+            SaveConfigure();
             Application.Exit();
+        }
+
+        private static void SaveConfigure()
+        {
+            Dictionary<string, string> configure = new Dictionary<string, string>();
+            configure.Add("source", "https://unsplash.com/rss");
+            configure.Add("interval", timer.Interval.ToString());
+            configure.Add("type", _imageFormat.ToString());
+            var kvs = configure.Select(kvp => string.Format("\"{0}\":\"{1}\"", kvp.Key, string.Join(",", kvp.Value)));
+            if (System.IO.File.Exists("config.json"))
+                System.IO.File.Delete("config.json");
+            System.IO.File.AppendAllText("config.json",string.Concat("{", string.Join(",", kvs), "}"));
+
         }
 
         private void SelectFormatMenuItem_Click(object sender, EventArgs e)
         {
-            _imageFormatItems.All(_imageFormatItem => _imageFormatItem.Checked = false);
+            foreach (var imageFormatItem in _imageFormatItems)
+                imageFormatItem.Checked = false;
             ((ToolStripMenuItem)sender).Checked = true;
             System.Reflection.PropertyInfo propertyinfo = typeof(System.Drawing.Imaging.ImageFormat).GetProperty(sender.ToString());
             _imageFormat = (System.Drawing.Imaging.ImageFormat)propertyinfo.GetValue(null, null);
