@@ -24,15 +24,15 @@ namespace Unsplasher
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 
-        public static void Set(Uri uri, Style style)
+        public static void Set(Uri uri, Style style, ImageFormat format)
         {
             Stream stream = new WebClient().OpenRead(uri.ToString());
 
             if (stream == null) return;
 
             Image img = Image.FromStream(stream);
-            string tempPath = Path.Combine(Path.GetTempPath(), "img.bmp");
-            img.Save(tempPath, ImageFormat.Bmp);
+            string tempPath = Path.Combine(Path.GetTempPath(), "img." + format.ToString());
+            img.Save(tempPath, format);
 
             RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true);
             if (style == Style.Stretched)
