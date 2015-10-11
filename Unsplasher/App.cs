@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using HtmlAgilityPack;
 using Unsplasher.Properties;
 using HtmlDocument = HtmlAgilityPack.HtmlDocument;
+using System.Text.RegularExpressions;
 
 namespace Unsplasher
 {
@@ -248,7 +249,8 @@ namespace Unsplasher
 
         private static void SetWallpaper(System.Drawing.Imaging.ImageFormat imageformat)
         {
-            List<HtmlNode> imageNodes = GetImageNodes("https://unsplash.com/rss");
+            List<HtmlNode> imageNodes = GetImageNodes("https://www.bing.com/HPImageArchive.aspx?format=rss&idx=0&n=16&mkt=en-US");
+            imageNodes.AddRange(GetImageNodes("https://unsplash.com/rss"));
 
             int rand = new Random().Next(imageNodes.Count);
             Wallpaper.Set(new Uri(imageNodes[rand].Attributes["src"].Value), Wallpaper.Style.Stretched, imageformat);
@@ -262,8 +264,23 @@ namespace Unsplasher
         private static List<HtmlNode> GetImageNodes(string url)
         {
             var client = new WebClient();
+            client.Encoding = System.Text.Encoding.UTF8;
             string html = client.DownloadString(url);
 
+            if (url.Contains("bing"))
+            {
+                html = html.Replace("1366x768.jpg", "1920x1080.jpg");
+
+                foreach (Match match in Regex.Matches(html, @"<img.+?/?>"))
+                {
+                    html = html.Replace(match.Value, "<div>" + match.Value + "</div>");
+                }
+
+                foreach (Match match in Regex.Matches(html, "src=\"/"))
+                {
+                    html = html.Replace(match.Value, "src=\"http://www.bing.com/");
+                }
+            }
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
