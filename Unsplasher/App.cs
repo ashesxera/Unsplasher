@@ -33,6 +33,7 @@ namespace Unsplasher
         private System.ComponentModel.BackgroundWorker backgroundWorker;
 
         static private System.Drawing.Imaging.ImageFormat _imageFormat;
+        static private List<string> _source;
 
         static private Timer timer;
         
@@ -53,7 +54,8 @@ namespace Unsplasher
 
             _refreshMenuItem.Text = "refreshing";
             _refreshMenuItem.Enabled = false;
-            backgroundWorker.RunWorkerAsync();
+            if(!backgroundWorker.IsBusy)
+                backgroundWorker.RunWorkerAsync();
         }
 
         private void LoadConfigure()
@@ -68,6 +70,7 @@ namespace Unsplasher
                     timer.Interval = Convert.ToInt32(conf["interval"]);
                     System.Reflection.PropertyInfo propertyinfo = typeof(System.Drawing.Imaging.ImageFormat).GetProperty(conf["type"]);
                     _imageFormat = (System.Drawing.Imaging.ImageFormat)propertyinfo.GetValue(null, null);
+                    
                 }
                 catch
                 {
@@ -81,7 +84,8 @@ namespace Unsplasher
         {
             _refreshMenuItem.Text = "refreshing";
             _refreshMenuItem.Enabled = false;
-            backgroundWorker.RunWorkerAsync();
+            if(!backgroundWorker.IsBusy)
+                backgroundWorker.RunWorkerAsync();
         }
 
         private void InitializeComponent()
@@ -128,6 +132,7 @@ namespace Unsplasher
             };
 
             _imageFormat = System.Drawing.Imaging.ImageFormat.Jpeg;
+            _source = new List<string>();
 
             _trayIconContextMenu.Items.AddRange(_imageFormatItems);
             _trayIconContextMenu.Items.Add(new ToolStripSeparator());
@@ -244,7 +249,8 @@ namespace Unsplasher
         {
             _refreshMenuItem.Text = "refreshing";
             _refreshMenuItem.Enabled = false;
-            backgroundWorker.RunWorkerAsync();
+            if(!backgroundWorker.IsBusy)
+                backgroundWorker.RunWorkerAsync();
         }
 
         private static void SetWallpaper(System.Drawing.Imaging.ImageFormat imageformat)
